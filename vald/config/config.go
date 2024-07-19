@@ -7,6 +7,7 @@ import (
 
 	evm "github.com/axelarnetwork/axelar-core/x/evm/types"
 	tss "github.com/axelarnetwork/axelar-core/x/tss/types"
+	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 )
 
 // ValdConfig contains all necessary vald configurations
@@ -21,7 +22,8 @@ type ValdConfig struct {
 	MaxLatestBlockAge            time.Duration `mapstructure:"max_latest_block_age"`  // If a block is older than this, vald does not consider it to be the latest block. This is supposed to be sufficiently larger than the block production time.
 	NoNewBlockPanicTimeout       time.Duration `mapstructure:"no_new_blocks_timeout"` // At times vald stalls completely. Until the bug is found it is better to panic and allow users to restart the process instead of doing nothing. Once at least one block has been seen vald will panic if it does not see another before the timout expires.
 
-	EVMConfig []evm.EVMConfig `mapstructure:"axelar_bridge_evm"`
+	EVMConfig []evm.EVMConfig         `mapstructure:"axelar_bridge_evm"`
+	BTCConfig btcrpcclient.ConnConfig `mapstructure:"axelar_bridge_btc"`
 }
 
 // DefaultValdConfig returns a configurations populated with default values

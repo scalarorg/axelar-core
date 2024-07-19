@@ -16,3 +16,10 @@ finality_override = "confirmation"
 name = "evm-2"
 rpc_addr = "https://localhost:7476"
 start-with-bridge = true
+
+[axelar_bridge_btc]
+Host = "https://localhost:8332"
+DisableTLS = true
+DisableConnectOnNew = true
+DisableAutoReconnect = false
+HTTPPostMode = true
