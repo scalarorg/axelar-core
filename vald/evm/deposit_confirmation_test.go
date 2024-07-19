@@ -140,7 +140,7 @@ func TestMgr_ProccessDepositConfirmation(t *testing.T) {
 		mgr = evm.NewMgr(evmMap, broadcaster, valAddr, rand.AccAddr(), &evmmock.LatestFinalizedBlockCacheMock{
 			GetFunc: func(_ nexus.ChainName) *big.Int { return big.NewInt(0) },
 			SetFunc: func(_ nexus.ChainName, _ *big.Int) {},
-		})
+		}, nil)
 	}).
 		Given("an evm rpc client", func() {
 			rpc = &mock.ClientMock{

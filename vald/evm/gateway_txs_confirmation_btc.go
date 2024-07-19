@@ -4,9 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
 
-	btc "github.com/axelarnetwork/axelar-core/vald/btc"
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
 	vote "github.com/axelarnetwork/axelar-core/x/vote/exported"
 	voteTypes "github.com/axelarnetwork/axelar-core/x/vote/types"
@@ -14,18 +12,16 @@ import (
 )
 
 // ProcessGatewayTxsConfirmation votes on the correctness of an EVM chain multiple gateway transactions
-func (mgr Mgr) ProcessGatewayTxsConfirmation(event *types.ConfirmGatewayTxsStarted) error {
-	if event.Chain == btc.CHAIN_BITCOIN {
-		return mgr.ProcessGatewayTxsConfirmationBTC(event)
-	}
+func (mgr Mgr) ProcessGatewayTxsConfirmationBTC(event *types.ConfirmGatewayTxsStarted) error {
 	if !mgr.isParticipantOf(event.Participants) {
 		pollIDs := slices.Map(event.PollMappings, func(m types.PollMapping) vote.PollID { return m.PollID })
 		mgr.logger("poll_ids", pollIDs).Debug("ignoring gateway txs confirmation poll: not a participant")
 		return nil
 	}
 
-	txIDs := slices.Map(event.PollMappings, func(poll types.PollMapping) common.Hash { return common.Hash(poll.TxID) })
-	txReceipts, err := mgr.GetTxReceiptsIfFinalized(event.Chain, txIDs, event.ConfirmationHeight)
+	txIDs := slices.Map(event.PollMappings, func(poll types.PollMapping) types.Hash { return poll.TxID })
+	txReceipts, err := mgr.btcMgr.GetTxsIfFinalized(txIDs, event.ConfirmationHeight)
+
 	if err != nil {
 		return err
 	}
@@ -42,7 +38,7 @@ func (mgr Mgr) ProcessGatewayTxsConfirmation(event *types.ConfirmGatewayTxsStart
 
 			logger.Infof("broadcasting empty vote for poll %s: %s", pollID.String(), txReceipt.Err().Error())
 		} else {
-			events := mgr.processGatewayTxLogs(event.Chain, event.GatewayAddress, txReceipt.Ok().Logs)
+			events := mgr.processGatewayTxBTC(event.Chain, event.GatewayAddress, txReceipt.Ok(), txID)
 			votes = append(votes, voteTypes.NewVoteRequest(mgr.proxy, pollID, types.NewVoteEvents(event.Chain, events...)))
 
 			logger.Infof("broadcasting vote %v for poll %s", events, pollID.String())

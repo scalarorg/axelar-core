@@ -30,6 +30,8 @@ import (
 	"github.com/axelarnetwork/axelar-core/cmd/axelard/cmd/utils"
 	"github.com/axelarnetwork/axelar-core/sdk-utils/broadcast"
 	errors2 "github.com/axelarnetwork/axelar-core/utils/errors"
+	btc "github.com/axelarnetwork/axelar-core/vald/btc"
+	btcRPC "github.com/axelarnetwork/axelar-core/vald/btc/rpc"
 	"github.com/axelarnetwork/axelar-core/vald/config"
 	"github.com/axelarnetwork/axelar-core/vald/evm"
 	evmRPC "github.com/axelarnetwork/axelar-core/vald/evm/rpc"
@@ -48,6 +50,7 @@ import (
 	"github.com/axelarnetwork/utils/jobs"
 	"github.com/axelarnetwork/utils/log"
 	"github.com/axelarnetwork/utils/slices"
+	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 )
 
 // RW grants -rw------- file permissions
@@ -493,7 +496,29 @@ func createEVMMgr(axelarCfg config.ValdConfig, cliCtx sdkClient.Context, b broad
 		log.Infof("successfully connected to EVM bridge for chain %s", chainName)
 	})
 
-	return evm.NewMgr(rpcs, b, valAddr, cliCtx.FromAddress, evm.NewLatestFinalizedBlockCache())
+	// TODO_SCALAR: remove this once we have a proper way to configure the BTC RPC client
+	btcClientConfig := btcrpcclient.ConnConfig{
+		Host:                 "http://192.168.1.239:18332",
+		DisableTLS:           true,
+		DisableConnectOnNew:  true,
+		DisableAutoReconnect: false,
+		// we use post mode as it sure it works with either bitcoind or btcwallet
+		// we may need to re-consider it later if we need any notifications
+		HTTPPostMode: true,
+	}
+	btcClientLogger := log.WithKeyVals("chain", btc.CHAIN_BITCOIN, "url", btcClientConfig.Host)
+
+	btcClient, err := btcRPC.NewClient(&btcClientConfig, btcClientLogger)
+
+	if err != nil {
+		err = sdkerrors.Wrap(err, "failed to create a BTC RPC client")
+		log.Error(err.Error())
+		panic(err)
+	}
+
+	btcMgr := btc.NewMgr(btcClient)
+
+	return evm.NewMgr(rpcs, b, valAddr, cliCtx.FromAddress, evm.NewLatestFinalizedBlockCache(), btcMgr)
 }
 
 // RWFile implements the ReadWriter interface for an underlying file

@@ -13,6 +13,7 @@ import (
 
 	"github.com/axelarnetwork/axelar-core/sdk-utils/broadcast"
 	"github.com/axelarnetwork/axelar-core/utils/errors"
+	btc "github.com/axelarnetwork/axelar-core/vald/btc"
 	"github.com/axelarnetwork/axelar-core/vald/evm/rpc"
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
 	nexus "github.com/axelarnetwork/axelar-core/x/nexus/exported"
@@ -34,16 +35,18 @@ type Mgr struct {
 	validator                 sdk.ValAddress
 	proxy                     sdk.AccAddress
 	latestFinalizedBlockCache LatestFinalizedBlockCache
+	btcMgr                    *btc.Mgr
 }
 
 // NewMgr returns a new Mgr instance
-func NewMgr(rpcs map[string]rpc.Client, broadcaster broadcast.Broadcaster, valAddr sdk.ValAddress, proxy sdk.AccAddress, latestFinalizedBlockCache LatestFinalizedBlockCache) *Mgr {
+func NewMgr(rpcs map[string]rpc.Client, broadcaster broadcast.Broadcaster, valAddr sdk.ValAddress, proxy sdk.AccAddress, latestFinalizedBlockCache LatestFinalizedBlockCache, btcMgr *btc.Mgr) *Mgr {
 	return &Mgr{
 		rpcs:                      rpcs,
 		proxy:                     proxy,
 		broadcaster:               broadcaster,
 		validator:                 valAddr,
 		latestFinalizedBlockCache: latestFinalizedBlockCache,
+		btcMgr:                    btcMgr,
 	}
 }
 
