@@ -2,6 +2,7 @@ package btc
 
 import (
 	goerrors "errors"
+	stderr "errors"
 
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
 	"github.com/axelarnetwork/utils/monads/results"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	CHAIN_BITCOIN = "bitcoin"
+	CHAIN_BITCOIN = "Wbitcoin"
 )
 
 // ErrNotFinalized is returned when a transaction is not finalized
@@ -35,7 +36,11 @@ func NewMgr(rpc rpc.Client) *Mgr {
 }
 
 func (mgr Mgr) isFinalized(tx rpc.BTCTransaction, confHeight int64) (bool, error) {
-	if tx.Metadata.Confirmations < confHeight {
+	if confHeight < 0 {
+		return false, stderr.New("ConfHeight cannot less than zero")
+	}
+
+	if tx.Data.Confirmations < uint64(confHeight) {
 		return false, nil
 	}
 
@@ -70,7 +75,7 @@ func (mgr Mgr) GetTxsIfFinalized(txIDs []types.Hash, confHeight uint64) ([]resul
 			isFinalized, err := mgr.isFinalized(tx, int64(confHeight))
 			if err != nil {
 				return results.FromErr[rpc.BTCTransaction](sdkerrors.Wrapf(errors.With(err, "chain", CHAIN_BITCOIN),
-					"cannot determine if the transaction %s is finalized", tx.Metadata.TxID),
+					"cannot determine if the transaction %s is finalized", tx.Data.Txid),
 				)
 			}
 

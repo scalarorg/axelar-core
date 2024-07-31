@@ -10,14 +10,14 @@ import (
 
 func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, error) {
 	// TODO_SCALAR: Parse the tx data to extract the sender, destination chain, and contract address
-	sender := types.Address(common.BytesToAddress([]byte(tx.Metadata.Details[0].Address)))
-	destinationChain := nexus.ChainName("Ethereum")
-	contractAddress := ""
+	sender := types.Address(common.BytesToAddress([]byte(tx.Data.Hash)))
+	destinationChain := nexus.ChainName("ethereum-sepolia")
+	contractAddress := "0xe432150cce91c13a887f7D836923d5597adD8E31"
 
 	return types.EventContractCall{
 		Sender:           sender,
 		DestinationChain: destinationChain,
 		ContractAddress:  contractAddress,
-		PayloadHash:      types.Hash(tx.RawData.Hash().CloneBytes()),
+		PayloadHash:      types.Hash([]byte(tx.Data.Hash)),
 	}, nil
 }

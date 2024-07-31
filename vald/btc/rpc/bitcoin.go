@@ -9,7 +9,6 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
-	"github.com/btcsuite/btcutil"
 )
 
 type BTCClient struct {
@@ -36,43 +35,31 @@ func (c *BTCClient) Close() {
 }
 
 type BTCTransaction struct {
-	Metadata btcjson.GetTransactionResult
-	RawData  btcutil.Tx
+	Data btcjson.TxRawResult
 }
 
 func (c *BTCClient) GetTransaction(txID types.Hash) (BTCTransaction, error) {
 	var tx BTCTransaction
-	txHash, err := chainhash.NewHash(txID.Bytes())
+	txBytes := txID.Bytes()
+	txBytesReverse := make([]byte, len(txBytes))
+	for i, b := range txBytes {
+		txBytesReverse[len(txBytes)-1-i] = b
+	}
+
+	txHash, err := chainhash.NewHash(txBytesReverse)
+
 	if err != nil {
 		c.logger.Errorf("failed to create BTC chainhash from txID", "txID", txID, "error", err)
 		return tx, err
 	}
 
-	var wg sync.WaitGroup
-	go func() {
-		defer wg.Done()
-		wg.Add(1)
-		txMetadata, err := c.client.GetTransaction(txHash)
+	txMetadata, err := c.client.GetRawTransactionVerbose(txHash)
 
-		if err != nil {
-			c.logger.Errorf("failed to get BTC transaction", "txID", txID, "error", err)
-		} else {
-			tx.Metadata = *txMetadata
-		}
-	}()
-
-	go func() {
-		txDetail, err := c.client.GetRawTransaction(txHash)
-
-		if err != nil {
-			c.logger.Errorf("failed to get BTC raw transaction", "txID", txID, "error", err)
-
-		} else {
-			tx.RawData = *txDetail
-		}
-	}()
-
-	wg.Wait()
+	if err != nil {
+		c.logger.Errorf("failed to get BTC transaction", "txID", txID, "error", err)
+	} else {
+		tx.Data = *txMetadata
+	}
 
 	return tx, err
 }
