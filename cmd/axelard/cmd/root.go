@@ -218,7 +218,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		txCommand(),
 		keys.Commands(app.DefaultNodeHome),
 	)
-
+	// 20240801: Taivv for debug purpose
+	// rootCmd.AddCommand(ScalarCmd())
 	// Add rosetta command
 	rootCmd.AddCommand(server.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Codec))
 
