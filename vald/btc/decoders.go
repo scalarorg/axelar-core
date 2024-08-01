@@ -2,8 +2,12 @@ package btc
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"log"
+	"os"
 
 	"github.com/axelarnetwork/axelar-core/vald/btc/rpc"
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
@@ -18,54 +22,109 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
+type globalParams struct {
+	expected_tag    string
+	covenant_pks    []string
+	covenant_quorum uint32
+}
+
+type chain struct {
+	id   uint64
+	name string
+}
+
 // hard code
 const (
-	covenant_quorum = 3
+	path                = "params/"
+	global_params_path  = path + "global_params.json"
+	mainnet_params_path = path + "main_net_params.json"
+	testnet_params_path = path + "test_net_params.json"
 )
 
-var net = &chaincfg.MainNetParams
-
-var expected_tag = []byte("01020304")
-
-var covenant_pks = [][]byte{
-	[]byte("02a60c2b5524ee762c3e56ea23a992953b88226463abcd1ca819d1d64880393791"),
-	[]byte("02f8812f5b3456f55b24d1e038a3900eae89a46d2394825b55145c24bb41c5be6d"),
-	[]byte("0330c74896d8724ef941d9fb129ea2a36b2e4eb87d37299ebd2f0f61be5a8d88cf"),
-	[]byte("03b029725f0b73a63cbf43cb7219178af098cd28f49398be587c75c34d5ae60fa8"),
-	[]byte("03fa7eb611fd1466820d97fc682a35e0f3af5db8e1a35acf653fa2e2f482f1cc52"),
-}
-
-func covenant_pks_to_pubkeys() []*btcec.PublicKey {
-	pubkeys := make([]*btcec.PublicKey, len(covenant_pks))
-	for i, pk := range covenant_pks {
-		pubkeys[i], _ = btcec.ParsePubKey(pk)
-	}
-	return pubkeys
-}
+var net = &chaincfg.MainNetParams // it can be anything cause we don't need to compare it
 
 // TODO_SCALAR: Parse the tx data to extract the sender, destination chain, and contract address
 func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, error) {
+	// get global params to parse the vault transactions
+	var globalParams globalParams
+	parseJsonFile(global_params_path, &globalParams)
+	expected_tag, err := hex.DecodeString(globalParams.expected_tag)
+	if err != nil {
+		log.Fatalf("failed to decode hex string")
+		return types.EventContractCall{}, err
+	}
+	covenant_pks := [][]byte{}
+	for i, key := range globalParams.covenant_pks {
+		covenant_pks[i], err = hex.DecodeString(key)
+		if err != nil {
+			log.Fatalf("failed to decode hex string")
+			return types.EventContractCall{}, err
+		}
+	}
+	covenant_quorum := globalParams.covenant_quorum
+
+	// get mainnet and testnet chain params to detect chain
+	var mainnetParams []chain
+	parseJsonFile(mainnet_params_path, &mainnetParams)
+	var testnetParams []chain
+	parseJsonFile(testnet_params_path, &testnetParams)
+
+	// Begin to parse the transaction
 	txHex := tx.Data.Hex
 	// Decode the hex string into bytes
 	txBytes, err := hex.DecodeString(txHex)
 	if err != nil {
-		log.Fatalf("failed to decode hex string: %v", err)
+		log.Fatalf("failed to decode hex string")
+		return types.EventContractCall{}, err
 	}
 
 	// Parse the transaction
 	neededParseTx := wire.NewMsgTx(wire.TxVersion)
 	err = neededParseTx.Deserialize(hex.NewDecoder(bytes.NewReader(txBytes)))
 	if err != nil {
-		log.Fatalf("failed to parse transaction: %v", err)
+		log.Fatalf("failed to parse transaction")
+		return types.EventContractCall{}, err
 	}
-	parseData, err := btcvault.ParseV0VaultTx(neededParseTx, expected_tag, covenant_pks_to_pubkeys(), covenant_quorum, net)
+	parseData, err := btcvault.ParseV0VaultTx(neededParseTx, expected_tag, covenant_pks_to_pubkeys(covenant_pks), covenant_quorum, net)
 	if err != nil {
-		log.Fatalf("failed to parse vault tx: %v", err)
+		log.Fatalf("failed to parse vault tx:")
+		return types.EventContractCall{}, err
 	}
+	// Get Payload data
 	payloadData := parseData.PayloadOpReturnData
+	// Get the sender
 	sender := types.Address(common.BytesToAddress(payloadData.ChainIdUserAddress))
-	// destinationChain := payloadData.ChainID
-	destinationChain := nexus.ChainName("ethereum-sepolia")
+	// Find and Get the chain name
+	byteChainID := payloadData.ChainID
+	numbChainID := binary.BigEndian.Uint64(byteChainID)
+	var nameChainID string
+	var chainFound bool
+	// Search in mainnet
+	for _, chain := range mainnetParams {
+		if chain.id == numbChainID {
+			nameChainID = chain.name
+			chainFound = true
+			break
+		}
+	}
+	// If not found in mainnet, search in testnet
+	if !chainFound {
+		for _, chain := range testnetParams {
+			if chain.id == numbChainID {
+				nameChainID = chain.name
+				chainFound = true
+				break
+			}
+		}
+	}
+	// If not found in both, return error
+	if !chainFound {
+		log.Fatalf("failed to find chain name: %v", numbChainID)
+		return types.EventContractCall{}, err
+	}
+
+	destinationChain := nexus.ChainName(nameChainID)
+	// Get the contract address
 	contractAddress := hex.EncodeToString(payloadData.ChainIdSmartContractAddress)
 	// need "0x"?
 
@@ -75,4 +134,28 @@ func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, e
 		ContractAddress:  contractAddress,
 		PayloadHash:      types.Hash([]byte(tx.Data.Hash)),
 	}, nil
+}
+
+func parseJsonFile(path_file string, v interface{}) {
+	jsonFile, err := os.Open(path_file)
+	if err != nil {
+		log.Fatalf("failed to open file: %v", err)
+	}
+	defer jsonFile.Close()
+	bytesFile, err := io.ReadAll(jsonFile)
+	if err != nil {
+		log.Fatalf("failed to read file: %v", err)
+	}
+	err = json.Unmarshal(bytesFile, v)
+	if err != nil {
+		log.Fatalf("failed to parse json file: %v", err)
+	}
+}
+
+func covenant_pks_to_pubkeys(covenant_pks [][]byte) []*btcec.PublicKey {
+	pubkeys := make([]*btcec.PublicKey, len(covenant_pks))
+	for i, pk := range covenant_pks {
+		pubkeys[i], _ = btcec.ParsePubKey(pk)
+	}
+	return pubkeys
 }
