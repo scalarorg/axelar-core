@@ -104,7 +104,7 @@ func handleContractCallToEVM(ctx sdk.Context, bk types.BaseKeeper, multisig type
 		"eventID", event.GetID(),
 		"commandID", cmd.ID.Hex(),
 	)
-
+	bk.Logger(ctx).Debug("In HandleContractCallToEVM, before emit event - websocket-debugging")
 	events.Emit(ctx, &types.ContractCallApproved{
 		Chain:            event.Chain,
 		EventID:          event.GetID(),
@@ -573,8 +573,15 @@ func handleConfirmedEvents(ctx sdk.Context, bk types.BaseKeeper, n types.Nexus, 
 
 func validateMessage(ctx sdk.Context, ck types.ChainKeeper, n types.Nexus, m types.MultisigKeeper, chain nexus.Chain, msg nexus.GeneralMessage) error {
 	// TODO refactor to do these checks earlier so we don't fail in the end blocker
+	fmt.Println("In validateMessage, first line - validate-debugging")
+	fmt.Println("In validateMessage, ChainKeeper - validate-debugging", ck)
+	fmt.Println("In validateMessage, Nexus - validate-debugging", n)
+	fmt.Println("In validateMessage, MultisigKeeper - validate-debugging", m)
+	fmt.Println("In validateMessage, Chain - validate-debugging", chain)
+	fmt.Println("In validateMessage, GeneralMessage - validate-debugging", msg)
 	_, ok := m.GetCurrentKeyID(ctx, chain.Name)
 	if !ok {
+		fmt.Println("In validateMessage, error cannot GetCurrentKeyID - validate-debugging")
 		return fmt.Errorf("current key not set")
 	}
 
@@ -605,9 +612,11 @@ func validateMessage(ctx sdk.Context, ck types.ChainKeeper, n types.Nexus, m typ
 }
 
 func handleMessage(ctx sdk.Context, ck types.ChainKeeper, chainID sdk.Int, keyID multisig.KeyID, msg nexus.GeneralMessage) {
+	ck.Logger(ctx).Debug("In handleMessage, first line - websocket-debugging")
 	cmd := types.NewApproveContractCallCommandGeneric(chainID, keyID, common.HexToAddress(msg.GetDestinationAddress()), common.BytesToHash(msg.PayloadHash), common.BytesToHash(msg.SourceTxID), msg.GetSourceChain(), msg.GetSourceAddress(), msg.SourceTxIndex, msg.ID)
+	ck.Logger(ctx).Debug("In handleMessage, after NewApproveContractCallCommandGeneric - websocket-debugging")
 	funcs.MustNoErr(ck.EnqueueCommand(ctx, cmd))
-
+	ck.Logger(ctx).Debug("In HandleMessage, before emit event - websocket-debugging")
 	events.Emit(ctx, &types.ContractCallApproved{
 		Chain:            msg.GetSourceChain(),
 		EventID:          types.EventID(msg.ID),
@@ -673,13 +682,16 @@ func handleMessages(ctx sdk.Context, bk types.BaseKeeper, n types.Nexus, m types
 					)
 					return false, err
 				}
-
+				fmt.Println("In handleMessages, before chainID - websocket-debugging")
 				chainID := funcs.MustOk(destCk.GetChainID(ctx))
+				fmt.Println("In handleMessages, before keyID - websocket-debugging")
 				keyID := funcs.MustOk(m.GetCurrentKeyID(ctx, chain.Name))
-
+				fmt.Println("In handleMessages, before msg.Type() check - websocket-debugging")
 				switch msg.Type() {
 				case nexus.TypeGeneralMessage:
+					fmt.Println("In handleMessages, before handleMessage call - websocket-debugging")
 					handleMessage(ctx, destCk, chainID, keyID, msg)
+					fmt.Println("In handleMessages, after handleMessage call - websocket-debugging")
 				case nexus.TypeGeneralMessageWithToken:
 					if err := handleMessageWithToken(ctx, destCk, n, chainID, keyID, msg); err != nil {
 						return false, err

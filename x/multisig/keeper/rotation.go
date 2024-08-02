@@ -26,6 +26,7 @@ func (k Keeper) GetCurrentKey(ctx sdk.Context, chainName nexus.ChainName) (expor
 
 // GetCurrentKeyID returns the current key ID of the given chain
 func (k Keeper) GetCurrentKeyID(ctx sdk.Context, chainName nexus.ChainName) (exported.KeyID, bool) {
+	// return exported.KeyID("scalar"), true
 	keyEpoch, ok := k.getKeyEpoch(ctx, chainName, k.getKeyRotationCount(ctx, chainName))
 	if !ok {
 		return "", false
@@ -139,10 +140,14 @@ func (k Keeper) deactivateKeyAtEpoch(ctx sdk.Context, chainName nexus.ChainName,
 }
 
 func (k Keeper) getKeyEpoch(ctx sdk.Context, chainName nexus.ChainName, epoch uint64) (keyEpoch types.KeyEpoch, ok bool) {
+	fmt.Println("in getKeyEpoch keyEpoch validate-debugging", keyEpoch)
+	fmt.Println("in getKeyEpoch epoch validate-debugging", epoch)
+	fmt.Println("in getKeyEpoch boolGet validate-debugging", k.getStore(ctx).Get(keyEpochPrefix.Append(utils.LowerCaseKey(chainName.String())).Append(utils.KeyFromInt(epoch)), &keyEpoch))
 	return keyEpoch, k.getStore(ctx).Get(keyEpochPrefix.Append(utils.LowerCaseKey(chainName.String())).Append(utils.KeyFromInt(epoch)), &keyEpoch)
 }
 
 func (k Keeper) setKeyEpoch(ctx sdk.Context, keyEpoch types.KeyEpoch) {
+	fmt.Println("in aetKeyEpoch keyEpoch validate-debugging", keyEpoch)
 	k.getStore(ctx).Set(keyEpochPrefix.Append(utils.LowerCaseKey(keyEpoch.Chain.String())).Append(utils.KeyFromInt(keyEpoch.Epoch)), &keyEpoch)
 }
 

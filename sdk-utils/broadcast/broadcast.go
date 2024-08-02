@@ -28,12 +28,15 @@ import (
 
 // PrepareTx returns a marshalled tx that can be broadcast to the blockchain
 func PrepareTx(ctx sdkClient.Context, txf tx.Factory, msgs ...sdk.Msg) ([]byte, error) {
+	fmt.Println("Preparing tx to broadcast to blockchain from prepare tx origin - broadcast-debugging")
 	if len(msgs) == 0 {
+		fmt.Println("Call broadcast with at least one message - broadcast-debugging")
 		return nil, fmt.Errorf("call broadcast with at least one message")
 	}
 
 	// By convention the first signer of a tx pays the fees
 	if len(msgs[0].GetSigners()) == 0 {
+		fmt.Println("Messages must have at least one signer - broadcast-debugging")
 		return nil, fmt.Errorf("messages must have at least one signer")
 	}
 
@@ -56,6 +59,10 @@ func PrepareTx(ctx sdkClient.Context, txf tx.Factory, msgs ...sdk.Msg) ([]byte, 
 	}
 
 	txBuilder.SetFeeGranter(ctx.GetFeeGranterAddress())
+	fmt.Println("tx signer", txBuilder.GetTx().GetSigners()[0].String())
+	fmt.Println("tx signer 2", msgs[0].GetSigners()[0].String())
+	fmt.Println("tx signer 3", ctx.GetFromAddress().String())
+	fmt.Println("tx signer name", ctx.GetFromName())
 	err = tx.Sign(txf, ctx.GetFromName(), txBuilder, true)
 	if err != nil {
 		return nil, err
@@ -65,6 +72,7 @@ func PrepareTx(ctx sdkClient.Context, txf tx.Factory, msgs ...sdk.Msg) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Prepared tx to broadcast to blockchain from prepare tx origin - broadcast-debugging")
 	return txBytes, nil
 }
 
@@ -77,13 +85,20 @@ func isSequenceMismatch(err error) bool {
 
 // Broadcast sends the given tx to the blockchain and blocks until it is added to a block (or timeout).
 func Broadcast(ctx sdkClient.Context, txBytes []byte, options ...BroadcasterOption) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting tx to blockchain from broadcast origin - broadcast-debugging")
+	fmt.Printf("dascy ctx: %v\n", ctx)
+	fmt.Printf("dascy txBytes: %v\n", txBytes)
+	fmt.Printf("dascy options: %v\n", options)
 	res, err := ctx.BroadcastTx(txBytes)
 	switch {
 	case err != nil:
+		fmt.Println("Broadcast failed from broadcast origin - broadcast-debugging", "err", err.Error())
 		return nil, err
 	case res.Code != abci.CodeTypeOK:
+		fmt.Println("Broadcast failed from broadcast origin - broadcast-debugging", "err", res.RawLog)
 		return nil, sdkerrors.ABCIError(res.Codespace, res.Code, res.RawLog)
 	case ctx.BroadcastMode != flags.BroadcastBlock:
+		fmt.Println("BroadcastMode != block - broadcast-debugging")
 		params := broadcastParams{
 			Timeout:         config.DefaultRPCConfig().TimeoutBroadcastTxCommit,
 			PollingInterval: 2 * time.Second,
@@ -95,10 +110,13 @@ func Broadcast(ctx sdkClient.Context, txBytes []byte, options ...BroadcasterOpti
 		res, err = waitForBlockInclusion(ctx, res.TxHash, params)
 	}
 
+	fmt.Println("Broadcasted tx to blockchain from broadcast origin - broadcast-debugging")
 	switch {
 	case err != nil:
+		fmt.Println("Broadcast failed from broadcast origin - broadcast-debugging", "err", err.Error())
 		return nil, err
 	case res.Code != abci.CodeTypeOK:
+		fmt.Println("Broadcast failed from broadcast origin - broadcast-debugging", "err", res.RawLog)
 		return nil, sdkerrors.ABCIError(res.Codespace, res.Code, res.RawLog)
 	}
 
@@ -155,17 +173,22 @@ func WithStateManager(clientCtx sdkClient.Context, txf tx.Factory, options ...Br
 
 // Broadcast broadcasts the given msgs to the blockchain, keeps track of the sender's sequence number
 func (b *statefulBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting message batch from stateful broadcaster - broadcast-debugging")
 	if len(msgs) == 0 {
+		fmt.Println("No messages to broadcast - broadcast-debugging")
 		return nil, fmt.Errorf("no messages to broadcast")
 	}
 
-	log.FromCtx(ctx).Debug("starting to broadcast message batch")
+	fmt.Println("Starting to broadcast message batch from stateful broadcaster - broadcast-debugging")
+	// log.FromCtx(ctx).Debug("starting to broadcast message batch")
 
 	var err error
 	b.txf, err = prepareFactory(b.clientCtx, b.txf)
 	if err != nil {
+		fmt.Println("Failed to prepare factory for broadcasting message batch from stateful broadcaster - broadcast-debugging", "err", err.Error())
 		return nil, err
 	}
+	fmt.Println("Prepared factory for broadcasting message batch from stateful broadcaster - broadcast-debugging")
 
 	bz, err := PrepareTx(b.clientCtx, b.txf, msgs...)
 	if sdkerrors.ErrWrongSequence.Is(err) {
@@ -174,20 +197,26 @@ func (b *statefulBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*
 			WithSequence(0)
 	}
 	if err != nil {
+		fmt.Println("Tx preparation failed - broadcast-debugging", "err", err.Error())
 		return nil, sdkerrors.Wrap(err, "tx preparation failed")
 	}
+	fmt.Println("Prepared tx for broadcasting message batch from stateful broadcaster - broadcast-debugging")
 	response, err := Broadcast(b.clientCtx, bz, b.options...)
 	if err != nil {
+		fmt.Println("Broadcast failed from stateful broadcaster - broadcast-debugging", "err", err.Error())
 		return nil, sdkerrors.Wrap(err, "broadcast failed")
 	}
 
 	ctx = log.Append(ctx, "hash", response.TxHash).
 		Append("op_code", response.Code).
 		Append("raw_log", response.RawLog)
-	log.FromCtx(ctx).Debug("received tx response")
+	fmt.Println("Received tx response from stateful broadcaster - broadcast-debugging")
+	// log.FromCtx(ctx).Debug("received tx response")
 
 	// broadcast has been successful, so increment sequence number
 	b.txf = b.txf.WithSequence(b.txf.Sequence() + 1)
+
+	fmt.Println("Broadcasted message batch from stateful broadcaster - broadcast-debugging")
 
 	return response, nil
 }
@@ -197,16 +226,22 @@ func (b *statefulBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*
 // they will be queried for and set on the provided Factory. A new Factory with
 // the updated fields will be returned.
 func prepareFactory(clientCtx sdkClient.Context, txf tx.Factory) (tx.Factory, error) {
+	fmt.Println("Preparing factory for broadcasting message batch from origin fn - broadcast-debugging")
 	from := clientCtx.GetFromAddress()
 
 	if err := txf.AccountRetriever().EnsureExists(clientCtx, from); err != nil {
+		fmt.Println("Failed to ensure account exists for broadcasting message batch from origin fn - broadcast-debugging", "err", err.Error())
 		return txf, err
 	}
 
 	initNum, initSeq := txf.AccountNumber(), txf.Sequence()
+	fmt.Println("Initial account number and sequence for broadcasting message batch from origin fn - broadcast-debugging", "initNum", initNum, "initSeq", initSeq)
 	if initNum == 0 || initSeq == 0 {
+		fmt.Println("Getting account number and sequence for broadcasting message batch from origin fn - broadcast-debugging", "from", from)
 		num, seq, err := txf.AccountRetriever().GetAccountNumberSequence(clientCtx, from)
+		fmt.Println("Account number and sequence for broadcasting message batch from origin fn - broadcast-debugging", "num", num, "seq", seq)
 		if err != nil {
+			fmt.Println("Failed to get account number and sequence for broadcasting message batch from origin fn - broadcast-debugging", "err", err.Error())
 			return txf, err
 		}
 
@@ -218,6 +253,8 @@ func prepareFactory(clientCtx sdkClient.Context, txf tx.Factory) (tx.Factory, er
 			txf = txf.WithSequence(seq)
 		}
 	}
+
+	fmt.Println("Prepared factory for broadcasting message batch from origin fn - broadcast-debugging", "account_number", txf.AccountNumber(), "sequence", txf.Sequence())
 
 	return txf, nil
 }
@@ -263,6 +300,7 @@ func WithRetry(broadcaster Broadcaster, maxRetries int, minSleep time.Duration) 
 
 // Broadcast implements the Broadcaster interface
 func (b *pipelinedBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting message batch from pipelined broadcaster - broadcast-debugging")
 	var (
 		response *sdk.TxResponse
 		err      error
@@ -278,7 +316,8 @@ func (b *pipelinedBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (
 		func(err error) bool {
 			i, ok := tryParseErrorMsgIndex(err)
 			if ok && len(retryMsgs) > 1 {
-				log.FromCtx(ctx).Debug(fmt.Sprintf("excluding message at index %d due to error", i))
+				fmt.Println("Excluding message at index due to error - broadcast-debugging", "index", i)
+				// log.FromCtx(ctx).Debug(fmt.Sprintf("excluding message at index %d due to error", i))
 				retryMsgs = append(retryMsgs[:i], retryMsgs[i+1:]...)
 				return true
 			}
@@ -293,6 +332,8 @@ func (b *pipelinedBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (
 
 			return false
 		})
+
+	fmt.Println("Broadcasted message batch from pipelined broadcaster - broadcast-debugging")
 
 	return response, err
 }
@@ -334,6 +375,7 @@ func Batched(broadcaster Broadcaster, batchThreshold, batchSizeLimit int) Broadc
 
 // Broadcast implements the Broadcaster interface
 func (b *batchedBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting message batch from batched broadcaster - broadcast-debugging")
 	ctx = log.Append(ctx, "process", "batched broadcast")
 
 	// serialize concurrent calls to broadcast
@@ -343,26 +385,33 @@ func (b *batchedBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*s
 		return nil, ctx.Err()
 	case <-b.backlog.Push(broadcastTask{ctx, msgs, callback}):
 		ctx = log.Append(ctx, "msg_count", len(msgs))
-		log.FromCtx(ctx).Debug("queuing up messages")
+		fmt.Println("Queuing up messages from batched broadcaster - broadcast-debugging")
+		// log.FromCtx(ctx).Debug("queuing up messages")
 		break
 	}
 
+	fmt.Println("Broadcasted message batch from batched broadcaster - broadcast-debugging")
+
 	select {
 	case <-ctx.Done():
+		fmt.Println("Context expired, returning nil from batched broadcaster - broadcast-debugging", "err", ctx.Err().Error())
 		return nil, ctx.Err()
 	case res := <-callback:
+		fmt.Println("Received response from batched broadcaster - broadcast-debugging", "response", res.Response, "err", res.Err)
 		return res.Response, res.Err
 	}
 }
 
 func (b *batchedBroadcaster) processBacklog() {
+	fmt.Println("Processing backlog from batched broadcaster - broadcast-debugging")
 	for {
 		// do not batch if there is no backlog pressure to minimize the risk of broadcast errors (and subsequent retries)
 		if b.backlog.Len() < b.batchThreshold {
 			task := b.backlog.Pop()
 
 			ctx := log.Append(task.Ctx, "batch_size", len(task.Msgs))
-			log.FromCtx(ctx).Debug("low traffic; no batch merging")
+			fmt.Println("Low traffic; no batch merging from batched broadcaster - broadcast-debugging")
+			// log.FromCtx(ctx).Debug("low traffic; no batch merging")
 			response, err := b.broadcaster.Broadcast(ctx, task.Msgs...)
 			task.Callback <- broadcastResult{
 				Response: response,
@@ -388,7 +437,8 @@ func (b *batchedBroadcaster) processBacklog() {
 			task := b.backlog.Pop()
 
 			if task.Ctx.Err() != nil {
-				log.FromCtx(task.Ctx).Debug("context expired, discarding msgs")
+				fmt.Println("Context expired, discarding messages from batched broadcaster - broadcast-debugging")
+				// log.FromCtx(task.Ctx).Debug("context expired, discarding msgs")
 				continue
 			}
 
@@ -403,7 +453,8 @@ func (b *batchedBroadcaster) processBacklog() {
 		}
 
 		ctx = log.Append(ctx, "batch_size", len(msgs))
-		log.FromCtx(ctx).Debug("high traffic; merging batches")
+		fmt.Println("High traffic; merging batches from batched broadcaster - broadcast-debugging")
+		// log.FromCtx(ctx).Debug("high traffic; merging batches")
 
 		response, err := b.broadcaster.Broadcast(ctx, auxiliarytypes.NewBatchRequest(msgs[0].GetSigners()[0], msgs))
 
@@ -414,6 +465,7 @@ func (b *batchedBroadcaster) processBacklog() {
 			}
 		}
 
+		fmt.Println("Processed backlog from batched broadcaster - broadcast-debugging")
 	}
 }
 
@@ -423,12 +475,15 @@ type refundableBroadcaster struct {
 
 // Broadcast wraps all given msgs into RefundMsgRequest msgs before broadcasting them
 func (b *refundableBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting message batch from refundable broadcaster - broadcast-debugging")
 	var refundables []sdk.Msg
 	for _, msg := range msgs {
 		if len(msg.GetSigners()) > 0 {
 			refundables = append(refundables, types.NewRefundMsgRequest(msg.GetSigners()[0], msg))
 		}
 	}
+
+	fmt.Println("Broadcasted message batch from refundable broadcaster - broadcast-debugging")
 	return b.broadcaster.Broadcast(ctx, refundables...)
 }
 
@@ -450,10 +505,14 @@ func SuppressExecutionErrs(broadcaster Broadcaster) Broadcaster {
 
 // Broadcast implements the Broadcaster interface
 func (s suppressorBroadcaster) Broadcast(ctx context.Context, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	fmt.Println("Broadcasting message batch from suppressor broadcaster - broadcast-debugging")
 	res, err := s.b.Broadcast(ctx, msgs...)
 	if errors2.Is[*sdkerrors.Error](err) {
-		log.FromCtx(ctx).Info(fmt.Sprintf("tx response with error: %s", err))
+		fmt.Println("tx response with error: - broadcast-debugging", "err", err.Error())
+		// log.FromCtx(ctx).Info(fmt.Sprintf("tx response with error: %s", err))
 		return nil, nil
 	}
+
+	fmt.Println("Broadcasted message batch from suppressor broadcaster - broadcast-debugging")
 	return res, err
 }

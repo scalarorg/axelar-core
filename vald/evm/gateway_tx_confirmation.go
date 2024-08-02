@@ -3,6 +3,7 @@ package evm
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ethereum/go-ethereum/common"
@@ -12,13 +13,16 @@ import (
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
 	nexus "github.com/axelarnetwork/axelar-core/x/nexus/exported"
 	voteTypes "github.com/axelarnetwork/axelar-core/x/vote/types"
+	"github.com/axelarnetwork/utils/log"
 )
 
 // ProcessGatewayTxConfirmation votes on the correctness of an EVM chain gateway's transactions
 func (mgr Mgr) ProcessGatewayTxConfirmation(event *types.ConfirmGatewayTxStarted) error {
+	fmt.Println("debugging - ProcessGatewayTxConfirmation 1")
 	if event.Chain == btc.CHAIN_BITCOIN {
 		return mgr.ProcessGatewayTxConfirmationBTC(event)
 	}
+	fmt.Println("debugging - ProcessGatewayTxConfirmation 2")
 	if !mgr.isParticipantOf(event.Participants) {
 		mgr.logger("pollID", event.PollID).Debug("ignoring gateway tx confirmation poll: not a participant")
 		return nil
@@ -30,18 +34,23 @@ func (mgr Mgr) ProcessGatewayTxConfirmation(event *types.ConfirmGatewayTxStarted
 	if err != nil {
 		return err
 	}
+	fmt.Println("debugging - ProcessGatewayTxConfirmation 3")
 	if txReceipt.Err() != nil {
 		vote = voteTypes.NewVoteRequest(mgr.proxy, event.PollID, types.NewVoteEvents(event.Chain))
-
+		log.Debugf("txReceipt: %v", txReceipt)
 		mgr.logger().Infof("broadcasting empty vote for poll %s: %s", event.PollID.String(), txReceipt.Err().Error())
 	} else {
+		fmt.Println("debugging - ProcessGatewayTxConfirmation 4")
 		events := mgr.processGatewayTxLogs(event.Chain, event.GatewayAddress, txReceipt.Ok().Logs)
 		vote = voteTypes.NewVoteRequest(mgr.proxy, event.PollID, types.NewVoteEvents(event.Chain, events...))
 
 		mgr.logger().Infof("broadcasting vote %v for poll %s", events, event.PollID.String())
 	}
 
+	fmt.Println("debugging - ProcessGatewayTxConfirmation 5")
 	_, err = mgr.broadcaster.Broadcast(context.TODO(), vote)
+
+	fmt.Println("debugging - ProcessGatewayTxConfirmation 6")
 
 	return err
 }
@@ -53,10 +62,11 @@ func (mgr Mgr) processGatewayTxLogs(chain nexus.ChainName, gatewayAddress types.
 		if !bytes.Equal(gatewayAddress.Bytes(), txlog.Address.Bytes()) {
 			continue
 		}
-
+		mgr.logger().Debugf("dascy processing log %d: %v", i, txlog)
 		switch txlog.Topics[0] {
 		case ContractCallSig:
 			gatewayEvent, err := DecodeEventContractCall(txlog)
+			mgr.logger().Debugf("dascy gateWay event log %v", gatewayEvent)
 			if err != nil {
 				mgr.logger().Debug(sdkerrors.Wrap(err, "decode event ContractCall failed").Error())
 				continue

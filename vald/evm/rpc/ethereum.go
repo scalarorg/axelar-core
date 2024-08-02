@@ -68,8 +68,13 @@ func (c *EthereumClient) HeaderByNumber(ctx context.Context, number *big.Int) (*
 func (c *EthereumClient) LatestFinalizedBlockNumber(ctx context.Context, confirmations uint64) (*big.Int, error) {
 	blockNumber, err := c.BlockNumber(ctx)
 	if err != nil {
+		fmt.Println("error getting block number from ethereum.go - eth-debugging", err.Error())
 		return nil, err
 	}
+
+	newBlockHeight := sdk.NewIntFromUint64(blockNumber).SubRaw(int64(confirmations)).AddRaw(1).BigInt()
+
+	fmt.Println("eth-debugging - newBlockHeight from ethereum.go: ", newBlockHeight)
 
 	return sdk.NewIntFromUint64(blockNumber).SubRaw(int64(confirmations)).AddRaw(1).BigInt(), nil
 }

@@ -15,15 +15,23 @@ import (
 
 // InitGenesis initializes the state from a genesis file
 func (k Keeper) InitGenesis(ctx sdk.Context, state *types.GenesisState) {
+	fmt.Println("In InitGenesis, firstline - validate-debugging")
 	k.setParams(ctx, state.Params)
-
+	fmt.Println("In InitGenesis, state - validate-debugging", state)
+	fmt.Println("In InitGenesis, state Params - validate-debugging", state.Params)
 	slices.ForEach(state.KeygenSessions, withContext(ctx, k.setKeygenSession))
+	fmt.Println("In InitGenesis, KeygenSessions - validate-debugging", state.KeygenSessions)
 	slices.ForEach(state.Keys, withContext(ctx, k.setKey))
+	fmt.Println("In InitGenesis, Keys - validate-debugging", state.Keys)
 	slices.ForEach(state.SigningSessions, withContext(ctx, k.setSigningSession))
+	fmt.Println("In InitGenesis, SigningSessions - validate-debugging", state.SigningSessions)
 	slices.ForEach(state.KeyEpochs, withContext(ctx, k.setKeyEpoch))
+	fmt.Println("In InitGenesis, KeyEpochs - validate-debugging", state.KeyEpochs)
 
 	keyEpochsByChain := slices.GroupBy(state.KeyEpochs, func(keyEpoch types.KeyEpoch) nexus.ChainName { return keyEpoch.GetChain() })
+	fmt.Println("In InitGenesis, keyEpochsByChain - validate-debugging", keyEpochsByChain)
 	for chain, keyEpochs := range keyEpochsByChain {
+		fmt.Println("InitGenesis, keyEpochsByChain - validate-debugging", chain, keyEpochs)
 		sort.SliceStable(keyEpochs, func(i, j int) bool { return keyEpochs[i].Epoch < keyEpochs[j].Epoch })
 		latestKeyEpoch := slices.Last(keyEpochs)
 

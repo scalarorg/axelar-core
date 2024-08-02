@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -80,7 +81,9 @@ func TestInitExportGenesis(t *testing.T) {
 	givenMsgServer := Given("a multisig msg server", setup)
 
 	whenKeygenSessionExists := When("some keygen session exists", func() {
+		fmt.Println("Before StartKeyGen")
 		msgServer.StartKeygen(sdk.WrapSDKContext(ctx), types.NewStartKeygenRequest(rand.AccAddr(), testutils.KeyID()))
+		fmt.Println("After StartKeyGen")
 	})
 
 	whenKeyExists := When("some key exists", func() {

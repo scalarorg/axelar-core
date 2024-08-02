@@ -83,34 +83,42 @@ func excludeJailedOrTombstoned(ctx sdk.Context, slashing types.SlashingKeeper, s
 
 // Deprecated: use ConfirmGatewayTxs instead
 func (s msgServer) ConfirmGatewayTx(c context.Context, req *types.ConfirmGatewayTxRequest) (*types.ConfirmGatewayTxResponse, error) {
+	fmt.Println("debugging - ConfirmGatewayTx 1")
 	ctx := sdk.UnwrapSDKContext(c)
 
 	chain, ok := s.nexus.GetChain(ctx, req.Chain)
+	fmt.Println("debugging - ConfirmGatewayTx 2")
 	if !ok {
 		return nil, fmt.Errorf("%s is not a registered chain", req.Chain)
 	}
 
+	fmt.Println("debugging - ConfirmGatewayTx 3")
 	if err := validateChainActivated(ctx, s.nexus, chain); err != nil {
 		return nil, err
 	}
 
+	fmt.Println("debugging - ConfirmGatewayTx 4")
 	keeper, err := s.ForChain(ctx, chain.Name)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("debugging - ConfirmGatewayTx 5")
 	gatewayAddress, ok := keeper.GetGatewayAddress(ctx)
 	if !ok {
 		return nil, fmt.Errorf("axelar gateway address not set")
 	}
 
+	fmt.Println("debugging - ConfirmGatewayTx 6")
 	pollParticipants, err := s.initializePoll(ctx, chain, req.TxID)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("debugging - ConfirmGatewayTx 7")
 	height := keeper.GetRequiredConfirmationHeight(ctx)
 
+	fmt.Println("debugging - ConfirmGatewayTx 8")
 	events.Emit(ctx, &types.ConfirmGatewayTxStarted{
 		TxID:               req.TxID,
 		Chain:              chain.Name,
@@ -122,6 +130,7 @@ func (s msgServer) ConfirmGatewayTx(c context.Context, req *types.ConfirmGateway
 	return &types.ConfirmGatewayTxResponse{}, nil
 }
 func (s msgServer) ConfirmGatewayTxs(c context.Context, req *types.ConfirmGatewayTxsRequest) (*types.ConfirmGatewayTxsResponse, error) {
+	fmt.Println("debugging - ConfirmGatewayTxs 1")
 	ctx := sdk.UnwrapSDKContext(c)
 
 	chain, ok := s.nexus.GetChain(ctx, req.Chain)

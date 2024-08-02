@@ -66,12 +66,15 @@ func (mgr Mgr) isFinalized(chain nexus.ChainName, txReceipt geth.Receipt, confHe
 	if !ok {
 		return false, fmt.Errorf("rpc client not found for chain %s", chain.String())
 	}
+	log.Info(fmt.Sprintf("Block number %s", txReceipt.BlockNumber))
+	log.Info(fmt.Sprintf("Lastest Finalized blockkkkkkkk %s", mgr.latestFinalizedBlockCache.Get(chain)))
 
 	if mgr.latestFinalizedBlockCache.Get(chain).Cmp(txReceipt.BlockNumber) >= 0 {
 		return true, nil
 	}
 
 	latestFinalizedBlockNumber, err := client.LatestFinalizedBlockNumber(context.Background(), confHeight)
+	log.Info(fmt.Sprintf("Latest finalized block number %s", latestFinalizedBlockNumber))
 	if err != nil {
 		return false, err
 	}
@@ -127,6 +130,7 @@ func (mgr Mgr) GetTxReceiptsIfFinalized(chain nexus.ChainName, txIDs []common.Ha
 	}
 
 	receipts, err := client.TransactionReceipts(context.Background(), txIDs)
+	log.Info(fmt.Sprintf("Receipts %v", receipts))
 	if err != nil {
 		return slices.Map(txIDs, func(_ common.Hash) results.Result[geth.Receipt] {
 			return results.FromErr[geth.Receipt](

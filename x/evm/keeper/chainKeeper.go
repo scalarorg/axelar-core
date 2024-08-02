@@ -910,14 +910,14 @@ func (k chainKeeper) SetEventCompleted(ctx sdk.Context, eventID types.EventID) e
 
 	event.Status = types.EventCompleted
 	k.setEvent(ctx, event)
-
+	fmt.Println("Before Emit EVMEventComplted - websocket-debugging")
 	events.Emit(ctx,
 		&types.EVMEventCompleted{
 			Chain:   event.Chain,
 			EventID: event.GetID(),
 			Type:    event.GetEventType(),
 		})
-
+	fmt.Println("After Emit EVMEventComplted - websocket-debugging")
 	return nil
 }
 
