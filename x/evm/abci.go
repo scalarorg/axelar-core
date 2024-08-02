@@ -612,11 +612,11 @@ func validateMessage(ctx sdk.Context, ck types.ChainKeeper, n types.Nexus, m typ
 }
 
 func handleMessage(ctx sdk.Context, ck types.ChainKeeper, chainID sdk.Int, keyID multisig.KeyID, msg nexus.GeneralMessage) {
-	ck.Logger(ctx).Debug("In handleMessage, first line - websocket-debugging")
+	fmt.Println("In handleMessage, first line - websocket-debugging")
 	cmd := types.NewApproveContractCallCommandGeneric(chainID, keyID, common.HexToAddress(msg.GetDestinationAddress()), common.BytesToHash(msg.PayloadHash), common.BytesToHash(msg.SourceTxID), msg.GetSourceChain(), msg.GetSourceAddress(), msg.SourceTxIndex, msg.ID)
-	ck.Logger(ctx).Debug("In handleMessage, after NewApproveContractCallCommandGeneric - websocket-debugging")
+	fmt.Println("In handleMessage, after NewApproveContractCallCommandGeneric - websocket-debugging")
 	funcs.MustNoErr(ck.EnqueueCommand(ctx, cmd))
-	ck.Logger(ctx).Debug("In HandleMessage, before emit event - websocket-debugging")
+	fmt.Println("In HandleMessage, before emit event - websocket-debugging")
 	events.Emit(ctx, &types.ContractCallApproved{
 		Chain:            msg.GetSourceChain(),
 		EventID:          types.EventID(msg.ID),

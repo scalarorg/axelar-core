@@ -236,6 +236,7 @@ func validateMessage(ctx sdk.Context, ibcK keeper.IBCKeeper, n types.Nexus, b ty
 }
 
 func handleMessage(ctx sdk.Context, n types.Nexus, b types.BankKeeper, sourceAddress nexus.CrossChainAddress, msg Message, token keeper.Coin) error {
+	fmt.Println("handleMessage in message-handler - websocket-debugging")
 	id, txID, nonce := n.GenerateMessageID(ctx)
 
 	// ignore token for call contract
