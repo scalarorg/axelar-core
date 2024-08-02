@@ -209,7 +209,10 @@ replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt/v4 v4.4.2
 replace github.com/rjeczalik/notify => github.com/rjeczalik/notify v0.9.3
 
 // use cometbft
-replace github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.31
+// replace github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.31
+replace github.com/tendermint/tendermint => ../cometbft
 
 // Temporary replacement for rosetta support
-replace github.com/cosmos/cosmos-sdk => github.com/axelarnetwork/cosmos-sdk v0.45.17-0.20240321205000-47c0c80e20ca
+// replace github.com/cosmos/cosmos-sdk => github.com/axelarnetwork/cosmos-sdk v0.45.17-0.20240321205000-47c0c80e20ca
+
+replace github.com/cosmos/cosmos-sdk => ../cosmos-sdk

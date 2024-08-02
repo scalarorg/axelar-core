@@ -14,10 +14,13 @@ RUN apk add --no-cache --update \
   linux-headers
 
 WORKDIR axelar
+RUN mkdir -p axelar
 
-COPY ./go.mod .
-COPY ./go.sum .
-RUN go mod download
+COPY ./go.mod ./axelar
+COPY ./go.sum ./axelar
+COPY ./cosmos-sdk ./cosmos-sdk
+COPY ./cometbft ./cometbft
+RUN cd ./axelar && go mod download
 
 # Use a compatible libwasmvm
 # Alpine Linux requires static linking against muslc: https://github.com/CosmWasm/wasmd/blob/v0.33.0/INTEGRATION.md#prerequisites
@@ -29,16 +32,16 @@ RUN if [[ "${WASM}" == "true" ]]; then \
     sha256sum /lib/libwasmvm_muslc.a | grep $(cat /tmp/checksums.txt | grep libwasmvm_muslc.${ARCH}.a | cut -d ' ' -f 1); \
     fi
 
-COPY . .
+COPY . ./axelar
 
-RUN make MUSLC="${WASM}" WASM="${WASM}" IBC_WASM_HOOKS="${IBC_WASM_HOOKS}" build
+RUN cd ./axelar && rm -rf cosmos-sdk/ cometbft/ && make MUSLC="${WASM}" WASM="${WASM}" IBC_WASM_HOOKS="${IBC_WASM_HOOKS}" build
 
 FROM alpine:3.18
 
 ARG USER_ID=1000
 ARG GROUP_ID=1001
 RUN apk add jq
-COPY --from=build /go/axelar/bin/* /usr/local/bin/
+COPY --from=build /go/axelar/axelar/bin/* /usr/local/bin/
 RUN addgroup -S -g ${GROUP_ID} axelard && adduser -S -u ${USER_ID} axelard -G axelard
 USER axelard
 COPY ./entrypoint.sh /entrypoint.sh
