@@ -23,7 +23,7 @@ type ValdConfig struct {
 	NoNewBlockPanicTimeout       time.Duration `mapstructure:"no_new_blocks_timeout"` // At times vald stalls completely. Until the bug is found it is better to panic and allow users to restart the process instead of doing nothing. Once at least one block has been seen vald will panic if it does not see another before the timout expires.
 
 	EVMConfig []evm.EVMConfig         `mapstructure:"axelar_bridge_evm"`
-	BTCConfig btcrpcclient.ConnConfig `mapstructure:"axelar_bridge_btc"`
+	BTCConfig btcrpcclient.ConnConfig `mapstructure:"scalar_bridge_btc"`
 }
 
 // DefaultValdConfig returns a configurations populated with default values
