@@ -16,6 +16,7 @@ import (
 
 // ProcessGatewayTxConfirmation votes on the correctness of an EVM chain gateway's transactions
 func (mgr Mgr) ProcessGatewayTxConfirmation(event *types.ConfirmGatewayTxStarted) error {
+	mgr.logger("pollID", event.PollID).Debugf("ScalarDebug#vald/evm processEvent: %+v", event)
 	if event.Chain == btc.CHAIN_BITCOIN {
 		return mgr.ProcessGatewayTxConfirmationBTC(event)
 	}

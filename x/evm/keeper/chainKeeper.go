@@ -903,6 +903,7 @@ func (k chainKeeper) EnqueueConfirmedEvent(ctx sdk.Context, id types.EventID) er
 
 // SetEventCompleted sets the event as completed
 func (k chainKeeper) SetEventCompleted(ctx sdk.Context, eventID types.EventID) error {
+	ctx.Logger().Debug("ScalarDebug# setting event as completed", "eventID", eventID)
 	event, ok := k.GetEvent(ctx, eventID)
 	if !ok || event.Status != types.EventConfirmed {
 		return fmt.Errorf("event %s is not confirmed", eventID)
@@ -910,7 +911,7 @@ func (k chainKeeper) SetEventCompleted(ctx sdk.Context, eventID types.EventID) e
 
 	event.Status = types.EventCompleted
 	k.setEvent(ctx, event)
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/keeper emit EVMEVentCompleted. eventID %s", eventID))
 	events.Emit(ctx,
 		&types.EVMEventCompleted{
 			Chain:   event.Chain,

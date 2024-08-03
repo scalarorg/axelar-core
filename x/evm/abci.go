@@ -504,6 +504,7 @@ func validateEvent(ctx sdk.Context, event types.Event, bk types.BaseKeeper, n ty
 }
 
 func handleConfirmedEvent(ctx sdk.Context, event types.Event, bk types.BaseKeeper, n types.Nexus, m types.MultisigKeeper) error {
+	ctx.Logger().Debug(fmt.Sprintf("handling confirmed event %s", event.GetID()))
 	if err := validateEvent(ctx, event, bk, n); err != nil {
 		return err
 	}
@@ -530,7 +531,7 @@ func handleConfirmedEventsForChain(ctx sdk.Context, chain nexus.Chain, bk types.
 	ck := funcs.Must(bk.ForChain(ctx, chain.Name))
 	queue := ck.GetConfirmedEventQueue(ctx)
 	endBlockerLimit := ck.GetParams(ctx).EndBlockerLimit
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/abci# event in queue %d, endBlockerLimit %d", len(queue.Keys()), endBlockerLimit))
 	var events []types.Event
 	var event types.Event
 	for int64(len(events)) < endBlockerLimit && queue.Dequeue(&event) {
@@ -566,6 +567,10 @@ func handleConfirmedEventsForChain(ctx sdk.Context, chain nexus.Chain, bk types.
 }
 
 func handleConfirmedEvents(ctx sdk.Context, bk types.BaseKeeper, n types.Nexus, m types.MultisigKeeper) {
+	ctx.Logger().Debug("ScalarDebug#x/evm/abci# handling confirmed events")
+	for _, chain := range n.GetChains(ctx) {
+		ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/abci# Chain %+v", chain))
+	}
 	for _, chain := range slices.Filter(n.GetChains(ctx), types.IsEVMChain) {
 		handleConfirmedEventsForChain(ctx, chain, bk, n, m)
 	}

@@ -163,7 +163,7 @@ func (v voteHandler) HandleCompletedPoll(ctx sdk.Context, poll vote.Poll) error 
 
 func (v voteHandler) HandleResult(ctx sdk.Context, result codec.ProtoMarshaler) error {
 	voteEvents := result.(*types.VoteEvents)
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/keeper handling vote events %+v", voteEvents))
 	if v.IsFalsyResult(result) {
 		return nil
 	}
@@ -188,6 +188,7 @@ func (v voteHandler) HandleResult(ctx sdk.Context, result codec.ProtoMarshaler) 
 }
 
 func (v voteHandler) handleEvent(ctx sdk.Context, ck types.ChainKeeper, event types.Event, chain nexus.Chain) error {
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug# handling event %+v for chain %+v", event.GetEventType(), chain))
 	if err := ck.SetConfirmedEvent(ctx, event); err != nil {
 		return err
 	}
@@ -220,6 +221,7 @@ func (v voteHandler) handleEvent(ctx sdk.Context, ck types.ChainKeeper, event ty
 }
 
 func (v voteHandler) handleContractCall(ctx sdk.Context, ck types.ChainKeeper, event types.Event) error {
+	ctx.Logger().Info(fmt.Sprintf("ScalarDebug# handling contract call event %s", event.GetID()))
 	msg := mustToGeneralMessage(ctx, v.nexus, event)
 
 	if err := v.nexus.SetNewMessage(ctx, msg); err != nil {

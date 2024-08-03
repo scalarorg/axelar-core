@@ -26,7 +26,7 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServiceServer {
 // Vote handles vote request
 func (s msgServer) Vote(c context.Context, req *types.VoteRequest) (*types.VoteResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/vote/keeper msg_server.Vote %+v", req))
 	voter := s.snapshotter.GetOperator(ctx, req.Sender)
 	if voter == nil {
 		return nil, fmt.Errorf("account %v is not registered as a validator proxy", req.Sender.String())
@@ -41,7 +41,7 @@ func (s msgServer) Vote(c context.Context, req *types.VoteRequest) (*types.VoteR
 	if err != nil {
 		return nil, err
 	}
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/vote/keeper vote result %+v for poll %+v", voteResult, poll))
 	if voteResult != vote.NoVote {
 		events.Emit(ctx,
 			&types.Voted{

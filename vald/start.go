@@ -177,6 +177,14 @@ func setPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String(flags.FlagChainID, app.Name, "The network chain ID")
 }
 
+// ProcessSigningStarted handles event signing started
+func ProcessEVMEventCompleted(event *evmTypes.EVMEventCompleted) error {
+
+	log.Infof("ScalarDebug# Handle EVMEventCompleted %s", event.String())
+
+	return nil
+}
+
 func listen(clientCtx sdkClient.Context, txf tx.Factory, axelarCfg config.ValdConfig, valAddr sdk.ValAddress, stateSource ReadWriter) {
 	encCfg := app.MakeEncodingConfig()
 	cdc := encCfg.Amino
@@ -303,6 +311,7 @@ func listen(clientCtx sdkClient.Context, txf tx.Factory, axelarCfg config.ValdCo
 		createJobTyped(evmGatewayTxsConf, evmMgr.ProcessGatewayTxsConfirmation, cancelEventCtx),
 		createJobTyped(multisigKeygen, multisigMgr.ProcessKeygenStarted, cancelEventCtx),
 		createJobTyped(multisigSigning, multisigMgr.ProcessSigningStarted, cancelEventCtx),
+		createJobTyped(eventBus.Subscribe(tmEvents.Filter[*evmTypes.EVMEventCompleted]()), ProcessEVMEventCompleted, cancelEventCtx),
 	}
 
 	slices.ForEach(js, func(job jobs.Job) {

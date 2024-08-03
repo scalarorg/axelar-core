@@ -22,7 +22,7 @@ func (mgr Mgr) ProcessGatewayTxConfirmationBTC(event *types.ConfirmGatewayTxStar
 	var vote *voteTypes.VoteRequest
 
 	txReceipt, err := mgr.btcMgr.GetTxIfFinalized(event.TxID, event.ConfirmationHeight)
-
+	mgr.logger("ScalarDebug").Debugf("ScalarDebug# GetTxIfFinalized event: %+v, txReceipt: %+v, err: %+v", event, txReceipt, err)
 	if err != nil {
 		return err
 	}

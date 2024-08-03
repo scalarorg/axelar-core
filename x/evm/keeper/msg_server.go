@@ -84,7 +84,7 @@ func excludeJailedOrTombstoned(ctx sdk.Context, slashing types.SlashingKeeper, s
 // Deprecated: use ConfirmGatewayTxs instead
 func (s msgServer) ConfirmGatewayTx(c context.Context, req *types.ConfirmGatewayTxRequest) (*types.ConfirmGatewayTxResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
-
+	ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/keeper msg_server %+v", req))
 	chain, ok := s.nexus.GetChain(ctx, req.Chain)
 	if !ok {
 		return nil, fmt.Errorf("%s is not a registered chain", req.Chain)
@@ -96,6 +96,7 @@ func (s msgServer) ConfirmGatewayTx(c context.Context, req *types.ConfirmGateway
 
 	keeper, err := s.ForChain(ctx, chain.Name)
 	if err != nil {
+		ctx.Logger().Debug("ScalarDebug#x/vote/keeper vote error", err)
 		return nil, err
 	}
 
@@ -110,7 +111,7 @@ func (s msgServer) ConfirmGatewayTx(c context.Context, req *types.ConfirmGateway
 	}
 
 	height := keeper.GetRequiredConfirmationHeight(ctx)
-
+	ctx.Logger().Debug("ScalarDebug#x/evm/keeper emit event ConfirmGatewayTxStarted")
 	events.Emit(ctx, &types.ConfirmGatewayTxStarted{
 		TxID:               req.TxID,
 		Chain:              chain.Name,

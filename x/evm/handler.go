@@ -17,6 +17,7 @@ func NewHandler(k types.BaseKeeper, v types.Voter, n types.Nexus, snapshotter ty
 	server := keeper.NewMsgServerImpl(k, n, v, snapshotter, staking, slashing, multisigKeeper)
 	h := func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
+		ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/handler.go HandleMsg %+v", msg))
 		switch msg := msg.(type) {
 		case *types.SetGatewayRequest:
 			res, err := server.SetGateway(sdk.WrapSDKContext(ctx), msg)
@@ -51,9 +52,11 @@ func NewHandler(k types.BaseKeeper, v types.Voter, n types.Nexus, snapshotter ty
 			return result, err
 		case *types.ConfirmGatewayTxRequest:
 			res, err := server.ConfirmGatewayTx(sdk.WrapSDKContext(ctx), msg)
+			ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/handler.go ConfirmGatewayTxRequest %+v, result %+v, error %+v", msg, res, err))
 			return sdk.WrapServiceResult(ctx, res, err)
 		case *types.ConfirmGatewayTxsRequest:
 			res, err := server.ConfirmGatewayTxs(sdk.WrapSDKContext(ctx), msg)
+			ctx.Logger().Debug(fmt.Sprintf("ScalarDebug#x/evm/handler.go ConfirmGatewayTxRequest %+v, result %+v, error %+v", msg, res, err))
 			return sdk.WrapServiceResult(ctx, res, err)
 		case *types.CreateDeployTokenRequest:
 			res, err := server.CreateDeployToken(sdk.WrapSDKContext(ctx), msg)
