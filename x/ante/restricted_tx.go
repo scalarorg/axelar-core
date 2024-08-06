@@ -1,6 +1,8 @@
 package ante
 
 import (
+	"fmt"
+	
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
@@ -32,6 +34,8 @@ func (d RestrictedTx) AnteHandle(ctx sdk.Context, msgs []sdk.Msg, simulate bool,
 		}
 
 		signerRole := d.permission.GetRole(ctx, signer)
+		ctx.Logger().Debug(fmt.Sprintf("Scalar debug# Msg '%T', signer role '%s', permission role '%s'", msg, signerRole, permission.GetPermissionRole((msg).(descriptor.Message))))
+
 		switch permission.GetPermissionRole((msg).(descriptor.Message)) {
 		case permission.ROLE_ACCESS_CONTROL:
 			if permission.ROLE_ACCESS_CONTROL != signerRole {

@@ -81,6 +81,8 @@ func routeQueuedMessages(ctx sdk.Context, n types.Nexus) {
 			break
 		}
 
+		fmt.Println("relayer-debugging - routeQueuedMessages in endblocker")
+
 		// try routing the message
 		_ = utils.RunCached(ctx, n, func(ctx sdk.Context) (struct{}, error) {
 			return struct{}{}, n.RouteMessage(ctx, msg.ID)

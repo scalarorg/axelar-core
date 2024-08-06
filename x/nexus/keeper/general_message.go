@@ -41,6 +41,7 @@ func (k Keeper) GenerateMessageID(ctx sdk.Context) (string, []byte, uint64) {
 
 // SetMessageExecuted sets the general message as executed
 func (k Keeper) SetMessageExecuted(ctx sdk.Context, id string) error {
+	fmt.Println("SetMessageExecuted - entry - relayer-debugging", "ID: ", id)
 	m, found := k.GetMessage(ctx, id)
 	if !found {
 		return fmt.Errorf("general message %s not found", id)
@@ -50,7 +51,11 @@ func (k Keeper) SetMessageExecuted(ctx sdk.Context, id string) error {
 		return fmt.Errorf("general message is not processing")
 	}
 
+	fmt.Println("SetMessageExecuted - deleting - relayer-debugging", "ID: ", m.ID, " | Status: ", m.Status.String())
+
 	k.deleteProcessingMessageID(ctx, m)
+
+	fmt.Println("SetMessageExecuted - deleted- relayer-debugging", "ID: ", m.ID, " | Status: ", m.Status.String())
 
 	m.Status = exported.Executed
 
@@ -169,6 +174,8 @@ func (k Keeper) setMessageProcessing(ctx sdk.Context, id string) error {
 		return fmt.Errorf("general message %s not found", id)
 	}
 
+	fmt.Println("setMessageProcessing - relayer-debugging", "ID: ", msg.ID, " | Status: ", msg.Status.String())
+
 	if !(msg.Is(exported.Approved) || msg.Is(exported.Failed)) {
 		return fmt.Errorf("general message has to be approved or failed")
 	}
@@ -274,6 +281,7 @@ func (k Keeper) RouteMessage(ctx sdk.Context, id string, routingCtx ...exported.
 	}
 
 	msg := funcs.MustOk(k.GetMessage(ctx, id))
+	fmt.Println("RouteMessage - relayer-debugging", "ID: ", msg.ID, " | Status: ", msg, " | Module: ", msg.Recipient.Chain.Module)
 	if err := k.getMessageRouter().Route(ctx, routingCtx[0], msg); err != nil {
 		return sdkerrors.Wrapf(err, "failed to route message %s to the %s module", id, msg.Recipient.Chain.Module)
 	}

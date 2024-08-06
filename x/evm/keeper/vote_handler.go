@@ -196,10 +196,12 @@ func (v voteHandler) handleEvent(ctx sdk.Context, ck types.ChainKeeper, event ty
 	// which bypassed nexus routing
 	switch event.GetEvent().(type) {
 	case *types.Event_ContractCall:
+		fmt.Println("handling contract call - scalar debugging")
 		if err := v.handleContractCall(ctx, ck, event); err != nil {
 			return err
 		}
 	default:
+		fmt.Println("handling non-contract call - scalar debugging", "eventType", event.GetEventType())
 		funcs.MustNoErr(ck.EnqueueConfirmedEvent(ctx, event.GetID()))
 	}
 

@@ -482,6 +482,7 @@ func (s msgServer) RetryIBCTransfer(c context.Context, req *types.RetryIBCTransf
 
 // RouteMessage calls IBC for cosmos messages or updates the state if the message in the nexus module for any other kind
 func (s msgServer) RouteMessage(c context.Context, req *types.RouteMessageRequest) (*types.RouteMessageResponse, error) {
+	fmt.Println("relayer-debugging", "RouteMessage", req.ID)
 	ctx := sdk.UnwrapSDKContext(c)
 
 	routingCtx := nexus.RoutingContext{

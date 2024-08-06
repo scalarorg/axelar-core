@@ -78,6 +78,8 @@ func (m Messenger) routeMsg(ctx sdk.Context, msg exported.WasmMessage) error {
 		return err
 	}
 
+	fmt.Println("relayer-debugging - routeMsg in msg_dispatcher")
+
 	// try routing the message
 	_ = utils.RunCached(ctx, m, func(ctx sdk.Context) (struct{}, error) {
 		return struct{}{}, m.RouteMessage(ctx, nexusMsg.ID)

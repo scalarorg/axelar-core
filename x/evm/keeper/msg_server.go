@@ -837,6 +837,7 @@ func (s msgServer) AddChain(c context.Context, req *types.AddChainRequest) (*typ
 }
 
 func (s msgServer) RetryFailedEvent(c context.Context, req *types.RetryFailedEventRequest) (*types.RetryFailedEventResponse, error) {
+	fmt.Println("debugging - RetryFailedEvent 1")
 	ctx := sdk.UnwrapSDKContext(c)
 
 	chain, ok := s.nexus.GetChain(ctx, req.Chain)
@@ -844,26 +845,38 @@ func (s msgServer) RetryFailedEvent(c context.Context, req *types.RetryFailedEve
 		return nil, fmt.Errorf("%s is not a registered chain", req.Chain)
 	}
 
+	fmt.Println("debugging - RetryFailedEvent 2")
+
 	if err := validateChainActivated(ctx, s.nexus, chain); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("debugging - RetryFailedEvent 3")
 
 	keeper, err := s.ForChain(ctx, chain.Name)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("debugging - RetryFailedEvent 4")
+
 	event, ok := keeper.GetEvent(ctx, req.EventID)
 	if !ok {
 		return nil, fmt.Errorf("event %s not found for chain %s", req.EventID, req.Chain)
 	}
 
+	fmt.Println("debugging - RetryFailedEvent 5")
+
 	if event.Status != types.EventFailed {
 		return nil, fmt.Errorf("event %s is not a failed event", req.EventID)
 	}
 
+	fmt.Println("debugging - RetryFailedEvent 6")
+
 	event.Status = types.EventConfirmed
 	keeper.GetConfirmedEventQueue(ctx).Enqueue(getEventKey(req.EventID), &event)
+
+	fmt.Println("debugging - RetryFailedEvent 7")
 
 	s.Logger(ctx).Info(
 		"re-queued failed event",

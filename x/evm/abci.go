@@ -504,9 +504,13 @@ func validateEvent(ctx sdk.Context, event types.Event, bk types.BaseKeeper, n ty
 }
 
 func handleConfirmedEvent(ctx sdk.Context, event types.Event, bk types.BaseKeeper, n types.Nexus, m types.MultisigKeeper) error {
+	fmt.Println("In handleConfirmedEvent, first line - scalar-debugging")
 	if err := validateEvent(ctx, event, bk, n); err != nil {
+		fmt.Println("In handleConfirmedEvent, error - scalar-debugging", err)
 		return err
 	}
+
+	fmt.Println("In handleConfirmedEvent, after validateEvent - scalar-debugging", "event", event.GetEvent())
 
 	switch event.GetEvent().(type) {
 	case *types.Event_ContractCall:
@@ -527,9 +531,13 @@ func handleConfirmedEvent(ctx sdk.Context, event types.Event, bk types.BaseKeepe
 }
 
 func handleConfirmedEventsForChain(ctx sdk.Context, chain nexus.Chain, bk types.BaseKeeper, n types.Nexus, m types.MultisigKeeper) {
+	fmt.Println("In handleConfirmedEventsForChain, first line - scalar-debugging")
 	ck := funcs.Must(bk.ForChain(ctx, chain.Name))
+	fmt.Println("In handleConfirmedEventsForChain, after ck - scalar-debugging")
 	queue := ck.GetConfirmedEventQueue(ctx)
+	fmt.Println("In handleConfirmedEventsForChain, after queue - scalar-debugging", "queue isEmpty: ", queue.IsEmpty())
 	endBlockerLimit := ck.GetParams(ctx).EndBlockerLimit
+	fmt.Println("In handleConfirmedEventsForChain, after endBlockerLimit - scalar-debugging")
 
 	var events []types.Event
 	var event types.Event
@@ -537,9 +545,13 @@ func handleConfirmedEventsForChain(ctx sdk.Context, chain nexus.Chain, bk types.
 		events = append(events, event)
 	}
 
+	fmt.Println("In handleConfirmedEventsForChain, after events - scalar-debugging", "len(events)", len(events))
+
 	for _, event := range events {
 		success := utils.RunCached(ctx, bk, func(ctx sdk.Context) (bool, error) {
+			fmt.Println("In handleConfirmedEventsForChain, first line - scalar-debugging")
 			if err := handleConfirmedEvent(ctx, event, bk, n, m); err != nil {
+				fmt.Println("In handleConfirmedEventsForChain, error - scalar-debugging", err)
 				ck.Logger(ctx).Debug(fmt.Sprintf("failed handling event: %s", err.Error()),
 					"chain", chain.Name.String(),
 					"eventID", event.GetID(),
@@ -557,15 +569,19 @@ func handleConfirmedEventsForChain(ctx sdk.Context, chain nexus.Chain, bk types.
 		})
 
 		if !success {
+			fmt.Println("In handleConfirmedEventsForChain, before emit event - scalar-debugging")
 			funcs.MustNoErr(ck.SetEventFailed(ctx, event.GetID()))
 			continue
 		}
+
+		fmt.Println("In handleConfirmedEventsForChain, before emit event - scalar-debugging")
 
 		funcs.MustNoErr(ck.SetEventCompleted(ctx, event.GetID()))
 	}
 }
 
 func handleConfirmedEvents(ctx sdk.Context, bk types.BaseKeeper, n types.Nexus, m types.MultisigKeeper) {
+	fmt.Printf("In handleConfirmedEvents, 1, %v", n)
 	for _, chain := range slices.Filter(n.GetChains(ctx), types.IsEVMChain) {
 		handleConfirmedEventsForChain(ctx, chain, bk, n, m)
 	}
