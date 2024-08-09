@@ -13,6 +13,7 @@ import (
 	"github.com/axelarnetwork/axelar-core/vald/btc/rpc"
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/scalarorg/btc-vault/btcvault"
 
@@ -97,11 +98,18 @@ func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, e
 	contractAddress := hex.EncodeToString(payloadData.ChainIdSmartContractAddress)
 	// need "0x"?
 
+	abi_minting_payload := types.Hash(common.BytesToHash(payloadData.Amount))
+	abi_address_payload := types.Hash(common.BytesToHash(payloadData.ChainIdUserAddress))
+
+	abi_payload := append(abi_address_payload[:], abi_minting_payload[:]...)
+	// Get the payload hash
+	payloadHash := types.Hash(common.BytesToHash(crypto.Keccak256(abi_payload)))
+
 	return types.EventContractCall{
 		Sender:           sender,
 		DestinationChain: destinationChain,
 		ContractAddress:  contractAddress,
-		PayloadHash:      types.Hash(common.HexToHash(tx.Data.Txid)),
+		PayloadHash:      payloadHash,
 	}, nil
 }
 
