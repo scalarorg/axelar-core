@@ -101,7 +101,7 @@ func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, e
 		Sender:           sender,
 		DestinationChain: destinationChain,
 		ContractAddress:  contractAddress,
-		PayloadHash:      types.Hash([]byte(tx.Data.Txid)),
+		PayloadHash:      types.Hash(common.HexToHash(tx.Data.Txid)),
 	}, nil
 }
 
