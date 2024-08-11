@@ -31,7 +31,7 @@ import (
 	"github.com/axelarnetwork/axelar-core/sdk-utils/broadcast"
 	errors2 "github.com/axelarnetwork/axelar-core/utils/errors"
 	btc "github.com/axelarnetwork/axelar-core/vald/btc"
-	btcRPC "github.com/axelarnetwork/axelar-core/vald/btc/rpc"
+
 	"github.com/axelarnetwork/axelar-core/vald/config"
 	"github.com/axelarnetwork/axelar-core/vald/evm"
 	evmRPC "github.com/axelarnetwork/axelar-core/vald/evm/rpc"
@@ -206,7 +206,6 @@ func listen(clientCtx sdkClient.Context, txf tx.Factory, axelarCfg config.ValdCo
 
 	evmMgr := createEVMMgr(axelarCfg, clientCtx, bc, valAddr)
 	multisigMgr := createMultisigMgr(bc, clientCtx, axelarCfg, valAddr)
-
 	nodeHeight, err := waitUntilNetworkSync(axelarCfg, robustClient)
 	if err != nil {
 		panic(err)
@@ -241,7 +240,6 @@ func listen(clientCtx sdkClient.Context, txf tx.Factory, axelarCfg config.ValdCo
 	evmTraConf := eventBus.Subscribe(tmEvents.Filter[*evmTypes.ConfirmKeyTransferStarted]())
 	evmGatewayTxConf := eventBus.Subscribe(tmEvents.Filter[*evmTypes.ConfirmGatewayTxStarted]())
 	evmGatewayTxsConf := eventBus.Subscribe(tmEvents.Filter[*evmTypes.ConfirmGatewayTxsStarted]())
-
 	multisigKeygen := eventBus.Subscribe(tmEvents.Filter[*multisigTypes.KeygenStarted]())
 	multisigSigning := eventBus.Subscribe(tmEvents.Filter[*multisigTypes.SigningStarted]())
 
@@ -495,20 +493,12 @@ func createEVMMgr(axelarCfg config.ValdConfig, cliCtx sdkClient.Context, b broad
 		log.Infof("successfully connected to EVM bridge for chain %s", chainName)
 	})
 
-	btcClientConfig := axelarCfg.BTCConfig
-
-	btcClientLogger := log.WithKeyVals("chain", btc.CHAIN_BITCOIN, "url", btcClientConfig.Host)
-
-	btcClient, err := btcRPC.NewClient(&btcClientConfig, btcClientLogger)
-
+	btcMgr, err := btc.NewMgr(axelarCfg.BTCConfig, cliCtx, b, valAddr)
 	if err != nil {
-		err = sdkerrors.Wrap(err, "failed to create a BTC RPC client")
+		err = sdkerrors.Wrap(err, fmt.Sprintf("failed to create an RPC connection for Btc chain. Verify your BTC Connection config."))
 		log.Error(err.Error())
 		panic(err)
 	}
-
-	btcMgr := btc.NewMgr(btcClient)
-
 	return evm.NewMgr(rpcs, b, valAddr, cliCtx.FromAddress, evm.NewLatestFinalizedBlockCache(), btcMgr)
 }
 

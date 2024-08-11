@@ -2,14 +2,17 @@ package btc
 
 import (
 	goerrors "errors"
-	stderr "errors"
 
-	"github.com/axelarnetwork/axelar-core/x/evm/types"
-	"github.com/axelarnetwork/utils/monads/results"
-
+	"github.com/axelarnetwork/axelar-core/sdk-utils/broadcast"
 	"github.com/axelarnetwork/axelar-core/utils/errors"
 	"github.com/axelarnetwork/axelar-core/vald/btc/rpc"
+	"github.com/axelarnetwork/axelar-core/x/evm/types"
+	"github.com/axelarnetwork/utils/log"
+	"github.com/axelarnetwork/utils/monads/results"
 	"github.com/axelarnetwork/utils/slices"
+	"github.com/btcsuite/btcd/rpcclient"
+	sdkClient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -25,19 +28,29 @@ var ErrTxFailed = goerrors.New("transaction failed")
 
 // Mgr manages all communication with Bitcoin
 type Mgr struct {
-	rpc rpc.Client
+	rpc    rpc.Client
+	config rpcclient.ConnConfig
 }
 
 // NewMgr returns a new Mgr instance
-func NewMgr(rpc rpc.Client) *Mgr {
-	return &Mgr{
-		rpc: rpc,
+func NewMgr(btcConfig rpcclient.ConnConfig, cliCtx sdkClient.Context, b broadcast.Broadcaster, valAddr sdk.ValAddress) (*Mgr, error) {
+
+	btcClientLogger := log.WithKeyVals("chain", CHAIN_BITCOIN, "url", btcConfig.Host)
+	btcClient, err := rpc.NewClient(&btcConfig, btcClientLogger)
+	if err != nil {
+		err = sdkerrors.Wrap(err, "failed to create a BTC RPC client")
+		log.Error(err.Error())
+		return nil, err
 	}
+	return &Mgr{
+		config: btcConfig,
+		rpc:    btcClient,
+	}, nil
 }
 
 func (mgr Mgr) isFinalized(tx rpc.BTCTransaction, confHeight int64) (bool, error) {
 	if confHeight < 0 {
-		return false, stderr.New("ConfHeight cannot less than zero")
+		return false, goerrors.New("ConfHeight cannot less than zero")
 	}
 
 	if tx.Data.Confirmations < uint64(confHeight) {
