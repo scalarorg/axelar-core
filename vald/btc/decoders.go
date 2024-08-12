@@ -2,11 +2,9 @@ package btc
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/axelarnetwork/axelar-core/vald/btc/rpc"
 	"github.com/axelarnetwork/axelar-core/x/evm/types"
@@ -50,9 +48,10 @@ func DecodeEventContractCall(tx *rpc.BTCTransaction) (types.EventContractCall, e
 	}
 	sender := types.Address(common.BytesToAddress(payloadData.ChainIdUserAddress))
 	// Find and Get the chain name
-	byteChainID := payloadData.ChainID
-	numberChainID := binary.BigEndian.Uint64(byteChainID)
-	destinationChain := nexus.ChainName(strconv.FormatUint(numberChainID, 10))
+	// numberChainID := binary.BigEndian.Uint64(payloadData.ChainID)
+	// destinationChain := nexus.ChainName(strconv.FormatUint(numberChainID, 10))
+	// Todo: Scalar hardcoded chain name for now
+	destinationChain := nexus.ChainName("ethereum-sepolia")
 	// Get the contract address
 	contractAddress := hex.EncodeToString(payloadData.ChainIdSmartContractAddress)
 	// need "0x"?
